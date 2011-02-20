@@ -87,16 +87,18 @@ public class MBankCSVToOFX {
 	FileInputStream fis = null;
 	String inputFileName = null;
 	String outputFileName = null;
-	OptionParser optionParser = new OptionParser("nf:ho:");
+	OptionParser optionParser = new OptionParser("nf:ho:b");
 	OptionSet options = optionParser.parse(args);
 	if (options.has("h")) {
 	    System.out
-		    .println("Usage: MBankCSVToOFX -f inputFilename -o outputFilename -n (append note to name) -h (help)");
+		    .println("Usage: MBankCSVToOFX -f inputFilename -o outputFilename -n (append note to name) -h (help) -b (append account number to memo)");
 	    System.exit(0);
 	}
 	boolean appendNoteToName = options.has("n");
+	boolean appendAccountToNote = options.has("b");
 	inputFileName = (String) options.valueOf("f");
 	outputFileName = (String) options.valueOf("o");
+	
 	initMap();
 	try {
 	    final Logger log = Logger.getLogger(MBankCSVToOFX.class
@@ -230,6 +232,8 @@ public class MBankCSVToOFX {
 		}
 
 		transaction.setMemo(removeMultipleSpaces(operationNote.trim()));
+		if (appendAccountToNote && transaction.getBankAccountTo()!=null)
+		    transaction.setMemo(transaction.getMemo()+":"+transaction.getBankAccountTo().getAccountNumber());
 		final String toSign = i[0] + i[1] + i[2] + i[3] + i[4] + i[5]
 			+ i[6];
 		transaction.setId(hexEncode(sha.digest(toSign.getBytes())));
