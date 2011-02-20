@@ -233,7 +233,7 @@ public class MBankCSVToOFX {
 
 		transaction.setMemo(removeMultipleSpaces(operationNote.trim()));
 		if (appendAccountToNote && transaction.getBankAccountTo()!=null)
-		    transaction.setMemo(transaction.getMemo()+":"+transaction.getBankAccountTo().getAccountNumber());
+		    transaction.setMemo(transaction.getMemo()+" "+transaction.getBankAccountTo().getAccountNumber());
 		final String toSign = i[0] + i[1] + i[2] + i[3] + i[4] + i[5]
 			+ i[6];
 		transaction.setId(hexEncode(sha.digest(toSign.getBytes())));
