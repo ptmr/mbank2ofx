@@ -1,4 +1,5 @@
 package pl.sevencoins.mbanktools;
+
 /**
  * mbannCSV converter
  * License: GPL v3.0
@@ -30,6 +31,8 @@ import java.util.TreeSet;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.swing.JFileChooser;
 
@@ -42,6 +45,7 @@ import net.sf.ofx4j.domain.data.banking.BankAccountDetails;
 import net.sf.ofx4j.domain.data.banking.BankStatementResponse;
 import net.sf.ofx4j.domain.data.banking.BankStatementResponseTransaction;
 import net.sf.ofx4j.domain.data.banking.BankingResponseMessageSet;
+import net.sf.ofx4j.domain.data.common.Payee;
 import net.sf.ofx4j.domain.data.common.Status;
 import net.sf.ofx4j.domain.data.common.Status.KnownCode;
 import net.sf.ofx4j.domain.data.common.Transaction;
@@ -98,7 +102,7 @@ public class MBankCSVToOFX {
 	boolean appendAccountToNote = options.has("b");
 	inputFileName = (String) options.valueOf("f");
 	outputFileName = (String) options.valueOf("o");
-	
+
 	initMap();
 	try {
 	    final Logger log = Logger.getLogger(MBankCSVToOFX.class
@@ -206,8 +210,11 @@ public class MBankCSVToOFX {
 		    }
 		    operNo++;
 		}
-
-		transaction.setPayeeId(payeeAccount);
+		Payee payee = payeeFromString(payeeData);
+		if (payee != null)
+		    transaction.setPayee(payee);
+		else
+		    transaction.setPayeeId(payeeAccount);
 
 		if (payeeAccount.length() > 10) {
 		    final BankAccountDetails bankAccountTo = new BankAccountDetails();
@@ -232,8 +239,13 @@ public class MBankCSVToOFX {
 		}
 
 		transaction.setMemo(removeMultipleSpaces(operationNote.trim()));
-		if (appendAccountToNote && transaction.getBankAccountTo()!=null)
-		    transaction.setMemo(transaction.getMemo()+" "+transaction.getBankAccountTo().getAccountNumber());
+		if (appendAccountToNote
+			&& transaction.getBankAccountTo() != null)
+		    transaction
+			    .setMemo(transaction.getMemo()
+				    + " "
+				    + transaction.getBankAccountTo()
+					    .getAccountNumber());
 		final String toSign = i[0] + i[1] + i[2] + i[3] + i[4] + i[5]
 			+ i[6];
 		transaction.setId(hexEncode(sha.digest(toSign.getBytes())));
@@ -286,6 +298,28 @@ public class MBankCSVToOFX {
 	    log.log(Level.SEVERE, "Error while converting", e);
 	}
 
+    }
+
+    static public Payee payeeFromString(String data) {
+	if (data == null || data.length() == 0)
+	    return null;
+	Payee payee = new Payee();
+
+	Pattern zip = Pattern.compile("\\d{2}-\\d{3}");
+	Matcher m = zip.matcher(data); // get a matcher object
+	if (m.find()) {
+	    String head = data.substring(0, m.start());
+	    String tail = data.substring(m.end(), data.length());
+
+	    payee.setName(" ");
+	    payee.setAddress1(head);
+	    payee.setZip(m.group());
+	    payee.setCity(tail);
+	    payee.setState(" ");
+	    payee.setCountry(" ");
+	} else
+	    return null;
+	return payee;
     }
 
     private static void initMap() {
